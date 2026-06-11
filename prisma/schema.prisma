@@ -1,0 +1,118 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  admin
+  hr
+  manager
+  payroll
+  employee
+  auditor
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(employee)
+  employeeId   String?    @unique
+  employee     Employee?  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  permissions  String[]
+  status       String     @default("active")
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Employee {
+  id             String        @id @default(uuid())
+  employeeCode   String        @unique
+  firstName      String
+  lastName       String
+  email          String        @unique
+  phone          String?
+  photoDataUrl   String?       @db.Text
+  department     String
+  position       String
+  managerId      String?
+  manager        Employee?     @relation("ManagerToSubordinate", fields: [managerId], references: [id])
+  subordinates   Employee[]    @relation("ManagerToSubordinate")
+  employmentType String        @default("full_time")
+  startDate      DateTime
+  status         String        @default("active")
+  user           User?
+  leaveBalances  LeaveBalance[]
+  leaveRequests  LeaveRequest[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("employees")
+}
+
+model LeaveBalance {
+  id                String   @id @default(uuid())
+  employeeId        String
+  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  year              Int
+  annualAllocated   Float    @default(10)
+  annualUsed        Float    @default(0)
+  annualRemaining   Float    @default(10)
+  sickAllocated     Float    @default(30)
+  sickUsed          Float    @default(0)
+  sickRemaining     Float    @default(30)
+  personalAllocated Float    @default(3)
+  personalUsed      Float    @default(0)
+  personalRemaining Float    @default(3)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([employeeId, year])
+  @@map("leave_balances")
+}
+
+model LeaveRequest {
+  id             String    @id @default(uuid())
+  employeeId     String
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType      String    // annual, sick, personal, maternity, emergency
+  startDate      DateTime
+  endDate        DateTime
+  totalDays      Float
+  days           Float?
+  reason         String
+  attachmentUrl  String?
+  status         String    @default("pending") // pending, approved, rejected
+  approvedBy     String?
+  approverId     String?
+  approvedAt     DateTime?
+  rejectedReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("leave_requests")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String
+  resourceId String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}

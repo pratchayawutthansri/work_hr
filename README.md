@@ -16,9 +16,7 @@ Then open:
 http://127.0.0.1:4173
 ```
 
-## Backend
-
-The backend lives in `backend/` and uses Express + Mongoose.
+The backend lives in `backend/` and uses Express + Prisma + PostgreSQL (Supabase).
 
 1. Copy env:
 
@@ -26,17 +24,15 @@ The backend lives in `backend/` and uses Express + Mongoose.
 Copy-Item backend\.env.example backend\.env
 ```
 
-2. Start MongoDB with Docker:
+2. Configure DATABASE_URL:
+   Open `backend/.env` and set your Supabase database connection string.
 
-```powershell
-docker compose up -d mongo
-```
-
-3. Install and seed:
+3. Install, push schema, seed and start:
 
 ```powershell
 cd backend
 npm.cmd install
+npx prisma db push
 npm.cmd run seed
 npm.cmd run dev
 ```
